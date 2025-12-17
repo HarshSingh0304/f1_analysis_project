@@ -1,7 +1,8 @@
 from pathlib import Path
 import hashlib
 import pandas as pd
-from typing import Iterable
+from typing import Iterable, Optional
+from datetime import timedelta
 
 
 def ensure_dir(path: Path) -> None:
@@ -66,3 +67,80 @@ def chunk_iterable(iterable, chunk_size: int):
             chunk = []
     if chunk:
         yield chunk
+
+
+# ============================================================
+# Domain normalization helpers (Specification-driven)
+# ============================================================
+
+def normalize_lap_time_to_ms(value) -> Optional[int]:
+    """
+    Normalize lap time values to integer milliseconds.
+
+    Supported input formats:
+    - pandas Timedelta
+    - datetime.timedelta
+    - float / int (seconds)
+    - string formatted as 'M:SS.sss'
+
+    Returns:
+    - int (milliseconds) or None if value is invalid / missing
+    """
+    if value is None or pd.isna(value):
+        return None
+
+    if isinstance(value, (pd.Timedelta, timedelta)):
+        return int(value.total_seconds() * 1000)
+
+    if isinstance(value, (int, float)):
+        return int(value * 1000)
+
+    if isinstance(value, str):
+        try:
+            minutes, seconds = value.split(":")
+            total_seconds = int(minutes) * 60 + float(seconds)
+            return int(total_seconds * 1000)
+        except ValueError:
+            return None
+
+    return None
+
+
+def normalize_tyre_compound(value) -> Optional[str]:
+    """
+    Normalize tyre compound representations to canonical values:
+    SOFT / MEDIUM / HARD
+    """
+    if value is None or pd.isna(value):
+        return None
+
+    value = str(value).strip().upper()
+
+    if value in {"SOFT", "S", "C5", "RED"}:
+        return "SOFT"
+    if value in {"MEDIUM", "M", "C4", "C3", "YELLOW"}:
+        return "MEDIUM"
+    if value in {"HARD", "H", "C2", "C1", "WHITE"}:
+        return "HARD"
+
+    return None
+
+
+def normalize_track_status(value) -> Optional[str]:
+    """
+    Normalize track status codes to canonical values:
+    GREEN / SC / RED
+    """
+    if value is None or pd.isna(value):
+        return None
+
+    value = str(value).strip().upper()
+
+    if value in {"1", "GREEN"}:
+        return "GREEN"
+    if value in {"2", "3", "4", "SC", "VSC"}:
+        return "SC"
+    if value in {"5", "RED"}:
+        return "RED"
+
+    return None
