@@ -4,19 +4,33 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# ------------------------------------------------------------
+# Project root (authoritative)
+# ------------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parents[1]
 
+
 class Config:
+    # --------------------------------------------------------
     # Project
+    # --------------------------------------------------------
     PROJECT_NAME = "f1_analysis_project"
     ENV = os.getenv("ENV", "development")
 
+    # --------------------------------------------------------
     # Data paths
+    # --------------------------------------------------------
     DATA_DIR = BASE_DIR / "data"
+
     RAW_DATA_DIR = DATA_DIR / "raw"
     FASTF1_CACHE_DIR = RAW_DATA_DIR / "fastf1_cache"
 
+    INTERIM_DATA_DIR = DATA_DIR / "interim"
+    STANDARDIZED_DATA_DIR = INTERIM_DATA_DIR / "standardized"
+
+    # --------------------------------------------------------
     # Database
+    # --------------------------------------------------------
     DB_USER = os.getenv("DB_USER")
     DB_PASSWORD = os.getenv("DB_PASSWORD")
     DB_HOST = os.getenv("DB_HOST", "localhost")
