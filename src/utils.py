@@ -1,9 +1,13 @@
 from pathlib import Path
 import hashlib
 import pandas as pd
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Dict, Callable
 from datetime import timedelta
 
+
+# ============================================================
+# Filesystem & generic helpers (UNCHANGED)
+# ============================================================
 
 def ensure_dir(path: Path) -> None:
     """
@@ -70,21 +74,12 @@ def chunk_iterable(iterable, chunk_size: int):
 
 
 # ============================================================
-# Domain normalization helpers (Specification-driven)
+# Domain normalization helpers (UNCHANGED)
 # ============================================================
 
 def normalize_lap_time_to_ms(value) -> Optional[int]:
     """
     Normalize lap time values to integer milliseconds.
-
-    Supported input formats:
-    - pandas Timedelta
-    - datetime.timedelta
-    - float / int (seconds)
-    - string formatted as 'M:SS.sss'
-
-    Returns:
-    - int (milliseconds) or None if value is invalid / missing
     """
     if value is None or pd.isna(value):
         return None
@@ -144,3 +139,66 @@ def normalize_track_status(value) -> Optional[str]:
         return "RED"
 
     return None
+
+
+# ============================================================
+# NEW: schema-driven normalization utilities
+# ============================================================
+
+def normalize_time_columns_to_ms(
+    df: pd.DataFrame,
+    columns: Iterable[str],
+) -> pd.DataFrame:
+    """
+    Normalize all specified time-like columns to milliseconds (Int64).
+    """
+    df = df.copy()
+
+    for col in columns:
+        if col in df.columns:
+            df[col] = (
+                df[col]
+                .apply(normalize_lap_time_to_ms)
+                .astype("Int64")
+            )
+
+    return df
+
+
+def drop_unsafe_columns(
+    df: pd.DataFrame,
+    unsafe_columns: Iterable[str],
+) -> pd.DataFrame:
+    """
+    Drop unsafe or contextual columns explicitly defined by schema.
+    """
+    df = df.copy()
+    to_drop = [c for c in unsafe_columns if c in df.columns]
+    return df.drop(columns=to_drop, errors="ignore")
+
+
+# ============================================================
+# NEW: strict schema enforcement (FINAL GUARANTEE)
+# ============================================================
+
+def enforce_schema(
+    df: pd.DataFrame,
+    stable_columns: Iterable[str],
+    normalized_columns: Iterable[str],
+    df_name: str
+) -> pd.DataFrame:
+    """
+    Enforce strict schema invariants:
+    - Keep ONLY stable + normalized columns
+    - Fail if any required column is missing
+    - Deterministic column ordering
+    """
+    stable_columns = list(stable_columns)
+    normalized_columns = list(normalized_columns)
+
+    allowed = stable_columns + normalized_columns
+
+    validate_dataframe_columns(df, allowed, df_name)
+
+    # Deterministic ordering: stable first, normalized second
+    return df[allowed].copy()

@@ -18,9 +18,6 @@ def setup_logging():
     project_log_path = log_dir / "project.log"
     error_log_path = log_dir / "errors.log"
 
-    # ------------------------------------------------------------------
-    # Root logger (avoid duplicate handlers in Jupyter)
-    # ------------------------------------------------------------------
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
 
@@ -29,27 +26,32 @@ def setup_logging():
             "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
         )
 
-        # Project log file
-        file_handler = logging.FileHandler(project_log_path)
+        # File handler (already UTF-8 safe)
+        file_handler = logging.FileHandler(project_log_path, encoding="utf-8")
         file_handler.setFormatter(formatter)
         file_handler.setLevel(logging.INFO)
 
-        # Console output
-        stream_handler = logging.StreamHandler()
+        # Console handler (FIXED)
+        import sys
+        stream_handler = logging.StreamHandler(stream=sys.stdout)
         stream_handler.setFormatter(formatter)
         stream_handler.setLevel(logging.INFO)
+
+        try:
+            stream_handler.stream.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
 
         root_logger.addHandler(file_handler)
         root_logger.addHandler(stream_handler)
 
-    # ------------------------------------------------------------------
-    # Dedicated error logger
-    # ------------------------------------------------------------------
     error_logger = logging.getLogger("errors")
     error_logger.setLevel(logging.ERROR)
 
     if not error_logger.handlers:
-        error_handler = logging.FileHandler(error_log_path)
+        error_handler = logging.FileHandler(
+            error_log_path, encoding="utf-8"
+        )
         error_handler.setFormatter(
             logging.Formatter(
                 "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
